@@ -127,19 +127,13 @@ def choose_kmeans_k(data, k_range):
 def find_ei_cluster_ratio(pei, labels, ei_elec_num=10):
     top_elec_ind = list(np.argsort(-pei)[:ei_elec_num])
     top_elec_labels = list(labels[top_elec_ind])
-    top_elec_count = {}
     top_elec_set = set(top_elec_labels)
-    for i in top_elec_set:
-        top_elec_count[i] = top_elec_labels.count(i)
+    top_elec_count = {i: top_elec_labels.count(i) for i in top_elec_set}
     cluster_ind1 = [k for k, v in top_elec_count.items() if v > ei_elec_num / 2]
     if len(cluster_ind1):
         return np.array(cluster_ind1)
-    else:
-        cluster_ind2 = [k for k, v in top_elec_count.items() if v > ei_elec_num / 3]
-        if len(cluster_ind2):
-            return np.array(cluster_ind2)
-        else:
-            return None
+    cluster_ind2 = [k for k, v in top_elec_count.items() if v > ei_elec_num / 3]
+    return np.array(cluster_ind2) if len(cluster_ind2) else None
 
 
 def pad_zero(data, length):
@@ -155,20 +149,19 @@ def pad_zero(data, length):
 def cal_zscore(data):
     dmean = np.mean(data, axis=1)
     dstd = np.std(data, axis=1)
-    norm_data = (data - dmean[:, None]) / dstd[:, None]
-    return norm_data
+    return (data - dmean[:, None]) / dstd[:, None]
 
 
 def cal_specs_matrix(raw, sfreq, method='STFT'):
     win_len = 0.5
-    overlap = 0.8
     freq_range = 300
     half_width = win_len * sfreq
-    ch_num = raw.shape[0]
     if method == 'STFT':
+        overlap = 0.8
+        ch_num = raw.shape[0]
         for i in range(ch_num):
             if i % 10 == 0:
-                print(str(i) + '/' + str(ch_num))
+                print(f'{str(i)}/{str(ch_num)}')
             time_signal = raw[i, :].ravel()
             time_signal = pad_zero(time_signal, 2 * half_width)
             f, t, hfo_spec = spectrogram(time_signal, fs=int(sfreq), nperseg=int(half_width),
@@ -179,18 +172,14 @@ def cal_specs_matrix(raw, sfreq, method='STFT'):
             freq_nums = int(len(f) * freq_range / f.max())
             hfo_new = hfo_new[:freq_nums, :]
             tmp_specs = np.reshape(hfo_new, (-1,))
-            if i == 0:
-                chan_specs = tmp_specs
-            else:
-                chan_specs = np.row_stack((chan_specs, tmp_specs))
+            chan_specs = tmp_specs if i == 0 else np.row_stack((chan_specs, tmp_specs))
     f_cut = f[:freq_range]
     return chan_specs, hfo_new.shape, t, f_cut
 
 
 def norm_specs(specs):
     specs_mean = specs - specs.mean(axis=0)
-    specs_norm = specs_mean / specs_mean.std(axis=0)
-    return specs_norm
+    return specs_mean / specs_mean.std(axis=0)
 
 
 def compute_full_band(raw_data, sfreq, ei):
@@ -370,8 +359,7 @@ class IctalModule(QWidget, Ictal_gui):
 
     def disp_win_down_func(self):
         self.disp_chans_start -= self.disp_chans_num
-        if self.disp_chans_start <= 0:
-            self.disp_chans_start = 0
+        self.disp_chans_start = max(self.disp_chans_start, 0)
         self.disp_refresh()
 
     def disp_win_up_func(self):
@@ -394,8 +382,7 @@ class IctalModule(QWidget, Ictal_gui):
 
     def disp_less_chans_func(self):
         self.disp_chans_num = int(self.disp_chans_num / 2.0)
-        if self.disp_chans_num <= 1:
-            self.disp_chans_num = 1
+        self.disp_chans_num = max(self.disp_chans_num, 1)
         self.disp_refresh()
 
     def disp_add_mag_func(self):
@@ -410,8 +397,7 @@ class IctalModule(QWidget, Ictal_gui):
 
     def disp_win_left_func(self):
         self.disp_time_start -= 0.2 * self.disp_time_win
-        if self.disp_time_start <= 0:
-            self.disp_time_start = 0
+        self.disp_time_start = max(self.disp_time_start, 0)
         self.disp_refresh()
 
     def disp_win_right_func(self):
@@ -422,14 +408,12 @@ class IctalModule(QWidget, Ictal_gui):
 
     def disp_shrink_time_func(self):
         self.disp_time_win += 2
-        if self.disp_time_win >= self.edf_time:
-            self.disp_time_win = self.edf_time
+        self.disp_time_win = min(self.disp_time_win, self.edf_time)
         self.disp_refresh()
 
     def disp_expand_time_func(self):
         self.disp_time_win -= 2
-        if self.disp_time_win <= 2:
-            self.disp_time_win = 2
+        self.disp_time_win = max(self.disp_time_win, 2)
         self.disp_refresh()
 
     def disp_scroll_mouse(self, e):
@@ -461,9 +445,10 @@ class IctalModule(QWidget, Ictal_gui):
     def delete_chans(self):
         deleted_chans = self.chans_list.selectedItems()
         deleted_list = [i.text() for i in deleted_chans]
-        deleted_ind_list = []
-        for deleted_name in deleted_list:
-            deleted_ind_list.append(self.disp_ch_names.index(deleted_name))
+        deleted_ind_list = [
+            self.disp_ch_names.index(deleted_name) for deleted_name in deleted_list
+        ]
+
         new_modified_data = np.delete(self.modified_edf_data, deleted_ind_list, axis=0)
         self.modified_edf_data = new_modified_data
         for d_chan in deleted_list:
@@ -493,9 +478,7 @@ class IctalModule(QWidget, Ictal_gui):
                 print('baseline time', self.baseline_pos)
                 reply = QMessageBox.question(self, 'confirm', 'confirm baseline?', QMessageBox.Yes | QMessageBox.No,
                                              QMessageBox.Yes)
-                if reply == QMessageBox.Yes:
-                    pass
-                else:
+                if reply != QMessageBox.Yes:
                     self.baseline_pos = np.array([0.0, 1.0])
                     self.disp_refresh()
         elif hasattr(self,'target_mouse') and self.target_mouse == 1:
@@ -518,8 +501,6 @@ class IctalModule(QWidget, Ictal_gui):
                     self.canvas.axes.axvline(self.baseline_pos[0])
                     self.canvas.axes.axvline(self.baseline_pos[1])
                     self.canvas.draw()
-        else:
-            pass
 
     # ei computation
     def ei_computation_func(self):
@@ -594,11 +575,11 @@ class IctalModule(QWidget, Ictal_gui):
         fig = plt.figure('signal')
         ax1 = fig.add_axes([0.2, 0.6, 0.6, 0.3])
         ax1.cla()
-        ax1.set_title(elec_name + ' signal')
-        if self.data_fomat == 1:
-            tmp_data_plot = tmp_data*1000
-        elif self.data_fomat == 0:
+        ax1.set_title(f'{elec_name} signal')
+        if self.data_fomat == 0:
             tmp_data_plot = tmp_data/1000
+        elif self.data_fomat == 1:
+            tmp_data_plot = tmp_data*1000
         ax1.plot(tmp_time_target, tmp_data_plot)
         ax1.set_xlabel('time(s)')
         ax1.set_ylabel('signal(mV)')
@@ -608,7 +589,7 @@ class IctalModule(QWidget, Ictal_gui):
         # ax2
         ax2 = fig.add_axes([0.2, 0.15, 0.6, 0.3])
         ax2.cla()
-        ax2.set_title(elec_name + ' spectrogram')
+        ax2.set_title(f'{elec_name} spectrogram')
         f, t, sxx = spectrogram(x=tmp_data, fs=int(self.fs), nperseg=int(0.5 * self.fs),
                                 noverlap=int(0.9 * 0.5 * self.fs), nfft=1024, mode='magnitude')
         sxx = (sxx - np.mean(sxx, axis=1, keepdims=True)) / np.std(sxx, axis=1, keepdims=True)
@@ -675,11 +656,11 @@ class IctalModule(QWidget, Ictal_gui):
             fig = plt.figure('signal')
             ax1 = fig.add_axes([0.2, 0.6, 0.6, 0.3])
             ax1.cla()
-            ax1.set_title(elec_name + ' signal')
-            if self.data_fomat == 1:
-                tmp_data_plot = tmp_data * 1000
-            elif self.data_fomat == 0:
+            ax1.set_title(f'{elec_name} signal')
+            if self.data_fomat == 0:
                 tmp_data_plot = tmp_data/1000
+            elif self.data_fomat == 1:
+                tmp_data_plot = tmp_data * 1000
             ax1.plot(tmp_time_target, tmp_data_plot)
             ax1.set_xlabel('time(s)')
             ax1.set_ylabel('signal(mV)')
@@ -689,7 +670,7 @@ class IctalModule(QWidget, Ictal_gui):
             # ax2
             ax2 = fig.add_axes([0.2, 0.15, 0.6, 0.3])
             ax2.cla()
-            ax2.set_title(elec_name + ' spectrogram')
+            ax2.set_title(f'{elec_name} spectrogram')
             f, t, sxx = spectrogram(x=tmp_data, fs=int(self.fs), nperseg=int(0.5 * self.fs),
                                     noverlap=int(0.9 * 0.5 * self.fs), nfft=1024, mode='magnitude')
             sxx = (sxx - np.mean(sxx, axis=1, keepdims=True)) / np.std(sxx, axis=1, keepdims=True)
@@ -784,11 +765,11 @@ class IctalModule(QWidget, Ictal_gui):
         fig = plt.figure('signal')
         ax1 = fig.add_axes([0.2, 0.6, 0.6, 0.3])
         ax1.cla()
-        ax1.set_title(elec_name + ' signal')
-        if self.data_fomat == 1:
-            tmp_data_plot = tmp_data*1000
-        elif self.data_fomat == 0:
+        ax1.set_title(f'{elec_name} signal')
+        if self.data_fomat == 0:
             tmp_data_plot = tmp_data/1000
+        elif self.data_fomat == 1:
+            tmp_data_plot = tmp_data*1000
         ax1.plot(tmp_time_target, tmp_data_plot)
         ax1.set_xlabel('time(s)')
         ax1.set_ylabel('signal(mV)')
@@ -798,7 +779,7 @@ class IctalModule(QWidget, Ictal_gui):
         # ax2
         ax2 = fig.add_axes([0.2, 0.15, 0.6, 0.3])
         ax2.cla()
-        ax2.set_title(elec_name + ' spectrogram')
+        ax2.set_title(f'{elec_name} spectrogram')
         f, t, sxx = spectrogram(x=tmp_data, fs=int(self.fs), nperseg=int(0.5 * self.fs),
                                 noverlap=int(0.9 * 0.5 * self.fs), nfft=1024, mode='magnitude')
         sxx = (sxx - np.mean(sxx, axis=1, keepdims=True)) / np.std(sxx, axis=1, keepdims=True)

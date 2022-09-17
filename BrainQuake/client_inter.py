@@ -187,8 +187,7 @@ class InterModule(QWidget, Interictal_gui):
 
     def disp_win_down_func(self):
         self.disp_chans_start -= self.disp_chans_num
-        if self.disp_chans_start <= 0:
-            self.disp_chans_start = 0
+        self.disp_chans_start = max(self.disp_chans_start, 0)
         self.disp_refresh()
 
     def disp_win_up_func(self):
@@ -208,8 +207,7 @@ class InterModule(QWidget, Interictal_gui):
 
     def disp_less_chans_func(self):
         self.disp_chans_num = int(self.disp_chans_num / 2.0)
-        if self.disp_chans_num <= 1:
-            self.disp_chans_num = 1
+        self.disp_chans_num = max(self.disp_chans_num, 1)
         self.disp_refresh()
 
     def disp_add_mag_func(self):
@@ -224,8 +222,7 @@ class InterModule(QWidget, Interictal_gui):
 
     def disp_win_left_func(self):
         self.disp_time_start -= 0.2 * self.disp_time_win
-        if self.disp_time_start <= 0:
-            self.disp_time_start = 0
+        self.disp_time_start = max(self.disp_time_start, 0)
         self.disp_refresh()
 
     def disp_win_right_func(self):
@@ -236,14 +233,12 @@ class InterModule(QWidget, Interictal_gui):
 
     def disp_shrink_time_func(self):
         self.disp_time_win += 2
-        if self.disp_time_win >= self.edf_time:
-            self.disp_time_win = self.edf_time
+        self.disp_time_win = min(self.disp_time_win, self.edf_time)
         self.disp_refresh()
 
     def disp_expand_time_func(self):
         self.disp_time_win -= 2
-        if self.disp_time_win <= 2:
-            self.disp_time_win = 2
+        self.disp_time_win = max(self.disp_time_win, 2)
         self.disp_refresh()
 
     def disp_scroll_mouse(self, e):
@@ -275,9 +270,10 @@ class InterModule(QWidget, Interictal_gui):
     def delete_chans(self):
         deleted_chans = self.chans_list.selectedItems()
         deleted_list = [i.text() for i in deleted_chans]
-        deleted_ind_list = []
-        for deleted_name in deleted_list:
-            deleted_ind_list.append(self.disp_ch_names.index(deleted_name))
+        deleted_ind_list = [
+            self.disp_ch_names.index(deleted_name) for deleted_name in deleted_list
+        ]
+
         new_modified_data = np.delete(self.modified_edf_data, deleted_ind_list, axis=0)
         self.modified_edf_data = new_modified_data
         for d_chan in deleted_list:
@@ -294,8 +290,9 @@ class InterModule(QWidget, Interictal_gui):
         # self.band_low,self.band_high
         self.chnList_val=[]
         remain_chns_count=self.chans_list.count()
-        for ci in range(remain_chns_count):
-            self.chnList_val.append(self.chans_list.item(ci).text())
+        self.chnList_val.extend(
+            self.chans_list.item(ci).text() for ci in range(remain_chns_count)
+        )
 
     def HI_computation_func(self):
         self.interictal_file=self.mat_filename
@@ -385,7 +382,7 @@ class InterModule(QWidget, Interictal_gui):
         for ci in range(len(showDets_times)):
             if len(showDets_times[ci])==0:
                 continue
-            for ti,tw in enumerate(showDets_times[ci]):
+            for tw in showDets_times[ci]:
                 if tw[0]>(self.disp_start/self.fs) and tw[1]<(self.disp_end/self.fs):
                     self.canvas.axes.plot([tw[0],tw[1]],[self.dr*ci,self.dr*ci],'r-',linewidth=2)
 
@@ -443,7 +440,7 @@ class InterModule(QWidget, Interictal_gui):
         for ci in range(len(showDets_times)):
             if len(showDets_times[ci]) == 0:
                 continue
-            for ti, tw in enumerate(showDets_times[ci]):
+            for tw in showDets_times[ci]:
                 if tw[0] > (self.disp_start / self.fs) and tw[1] < (self.disp_end / self.fs):
                     self.canvas.axes.plot([tw[0], tw[1]], [self.dr * ci, self.dr * ci], 'r-', linewidth=2)
 

@@ -39,7 +39,7 @@ def text_recv(socket):
             # print("New message length:", msg[:HEADERSIZE])
             msglen = int(msg[:HEADERSIZE])
             new_msg = False
-        
+
         full_msg += msg
 
         if len(full_msg) == (msglen//BUFFER_SIZE+1)*BUFFER_SIZE:
@@ -59,20 +59,16 @@ def file_recv(socket, reconType='recon-all'):
     # filepath = os.path.join('data', 'recv', filename)
     filesize = int(filesize)
     pat_name = filename.split('.')[0].split('T')[0]
-    if os.path.exists(f"{FILEPATH}/{pat_name}"):
-        filepath = os.path.join('data', 'recv', pat_name, filename)
-    else:
+    if not os.path.exists(f"{FILEPATH}/{pat_name}"):
         os.system(f"mkdir {FILEPATH}/{pat_name}")
-        filepath = os.path.join('data', 'recv', pat_name, filename)
-
+    filepath = os.path.join('data', 'recv', pat_name, filename)
     # start receiving the file from the socket and writing to the file stream
     with open(filepath, "wb") as f:
         while True:
-            # read bytes from the socket (receive)
-            bytes_read = socket.recv(BUFFER_SIZE)
-            if not bytes_read:    
+            if bytes_read := socket.recv(BUFFER_SIZE):
+                f.write(bytes_read)
+            else:
                 break
-            f.write(bytes_read)
     f.close()
     number = utils.add_a_log(name=pat_name, hospital='Yuquan', reconType=reconType)
     socket.close()
@@ -85,20 +81,16 @@ def file_recvCT(socket):
     # filepath = os.path.join('data', 'recv', filename)
     filesize = int(filesize)
     pat_name = filename.split('.')[0].split('C')[0]
-    if os.path.exists(f"{FILEPATH}/{pat_name}"):
-        os.system(f"mkdir {FILEPATH}/{pat_name}/fslresults")
-        filepath = os.path.join('data', 'recv', pat_name, filename)
-    else:
+    if not os.path.exists(f"{FILEPATH}/{pat_name}"):
         os.system(f"mkdir {FILEPATH}/{pat_name}")
-        os.system(f"mkdir {FILEPATH}/{pat_name}/fslresults")
-        filepath = os.path.join('data', 'recv', pat_name, filename)
-
+    os.system(f"mkdir {FILEPATH}/{pat_name}/fslresults")
+    filepath = os.path.join('data', 'recv', pat_name, filename)
     with open(filepath, "wb") as f:
         while True:
-            bytes_read = socket.recv(BUFFER_SIZE)
-            if not bytes_read:
+            if bytes_read := socket.recv(BUFFER_SIZE):
+                f.write(bytes_read)
+            else:
                 break
-            f.write(bytes_read)
     f.close()
     socket.close()
     return pat_name
@@ -113,13 +105,12 @@ def file_send(filepath, socket):
     with open(filepath, "rb") as f:
         # for _ in progress:
         while True:
-            # read the bytes from the file
-            bytes_read = f.read(BUFFER_SIZE)
-            if not bytes_read:
+            if bytes_read := f.read(BUFFER_SIZE):
+                # we use sendall to assure transimission in 
+                # busy networks
+                socket.sendall(bytes_read)
+            else:
                 break
-            # we use sendall to assure transimission in 
-            # busy networks
-            socket.sendall(bytes_read)
-            # update the progress bar
-            # progress.update(len(bytes_read))
+                    # update the progress bar
+                    # progress.update(len(bytes_read))
     socket.close()

@@ -12,7 +12,7 @@ from scipy import ndimage
 # patient = 'yejiguo'
 # CT_dir = f"/Users/fangcai/Documents/MATLAB/{patient}_test/CT"
 # mri_dir = f"/Users/fangcai/Documents/MATLAB/{patient}_test/{patient}/mri"
-SUBJECTS_DIR = f"/usr/local/freesurfer/subjects"
+SUBJECTS_DIR = "/usr/local/freesurfer/subjects"
 
 def run(cmd):
     """
@@ -26,7 +26,7 @@ def run(cmd):
     """
     print(f"Running shell command: {cmd}")
     os.system(cmd)
-    print(f"Done!")
+    print("Done!")
 
 def align(
     inp,
@@ -154,7 +154,7 @@ def eep(patient):
         init = None,
         finesearch = None,
     )
-    
+
     # align_nonlinear(
     #     inp = f"{CT_dir}/{patient}CT.nii.gz",
     #     ref = f"{mri_dir}/orig.nii.gz",
@@ -162,10 +162,10 @@ def eep(patient):
     #     out = f"{CT_dir}/fslresults/{patient}outvolnonlinear.nii.gz",
     #     warp= f"{CT_dir}/fslresults/{patient}invol2refvolnonlinear.mat",
     # )
-    
+
     ## Masking
     CTreg = os.path.join(f"{ct_dir}/fslresults", f"{patient}outvol.nii.gz")
-    mask = os.path.join(mri_dir, f"mask.mgz")
+    mask = os.path.join(mri_dir, "mask.mgz")
     img_ct = nib.load(CTreg)
     img_mask = nib.load(mask)
     data_ct = img_ct.get_fdata()

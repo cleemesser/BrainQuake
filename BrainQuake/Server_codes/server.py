@@ -27,27 +27,17 @@ while True:
     # Now we are listening on port 6669.
     clientsocket, address = s.accept()
     print(f'Connection from {address} has been established.')
-    
+
     while True:
         # receive a task request: new task or check
         task = utils_scs.text_recv(clientsocket)
         print(f'task: {task}')
 
-        if task == '10' or task == '11' or task == '12': # task 1: reconstruction
+        if task in ['10', '11', '12']: # task 1: reconstruction
             p1 = multiprocessing.Process(target=task_utils.recv_a_t1, args=(clientsocket, task,))
             p1.start()
             # p1.join()
             break
-        # elif task == '12': # task 12: CT file upload
-            # p2 = multiprocessing.Process(target=task_utils.recv_a_ct, args=(clientsocket,))
-            # p2.start()
-            # p2.join()
-            # break
-        # elif task == '13': # task 13: download fslresults
-            # p3 = multiprocessing.Process(target=task_utils.send_fsls, args=(clientsocket,))
-            # p3.start()
-            # p3.join()
-            # break
         elif task == '2': # task 2: check
             p4 = multiprocessing.Process(target=task_utils.check_recon, args=(clientsocket,))
             p4.start()

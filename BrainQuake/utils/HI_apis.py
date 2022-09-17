@@ -11,13 +11,10 @@ def HI_preprocess_file(filename,remain_chns,highpass_freqband,proBar):
     filedir=os.path.dirname(filename)
     fileBaseName=os.path.basename(filename)
     filePreExt=fileBaseName.split('.')[0]
-    fileResultsDir='./HFOdets/'+filePreExt
+    fileResultsDir = f'./HFOdets/{filePreExt}'
     if os.path.exists(fileResultsDir):
-        os.system('rm -r '+fileResultsDir)
-        os.makedirs(fileResultsDir)
-    else:
-        os.makedirs(fileResultsDir)
-
+        os.system(f'rm -r {fileResultsDir}')
+    os.makedirs(fileResultsDir)
     edf_data = mne.io.read_raw_edf(filename, preload=False, stim_channel=None)
     fs = edf_data.info['sfreq']
 
@@ -32,7 +29,7 @@ def HI_preprocess_file(filename,remain_chns,highpass_freqband,proBar):
     time_ranges=np.array(list(zip(time_inter[:-1],time_inter[1:])))
 
     for id,tr in enumerate(time_ranges):
-        print('part {}/{}'.format(id+1,time_ranges.shape[0]))
+        print(f'part {id + 1}/{time_ranges.shape[0]}')
         start,end=edf_data.time_as_index(tr)
         batch_data=edf_data[valid_chns_index,start:end][0]
         batch_data=batch_data-batch_data.mean(axis=0)
@@ -40,8 +37,15 @@ def HI_preprocess_file(filename,remain_chns,highpass_freqband,proBar):
         batch_enve = return_hil_enve_norm(batch_data, fs, highpass_freqband)
         batch_t=np.arange(batch_enve.shape[1])/fs+tr[0]
 
-        np.savez(os.path.join(fileResultsDir,'rawEnve_{}.npz'.format(id+1)),rawEnve=batch_enve,rawTimes=batch_t,valid_chns_index=valid_chns_index,
-                 valid_chns=valid_chns_st,fs=fs)
+        np.savez(
+            os.path.join(fileResultsDir, f'rawEnve_{id + 1}.npz'),
+            rawEnve=batch_enve,
+            rawTimes=batch_t,
+            valid_chns_index=valid_chns_index,
+            valid_chns=valid_chns_st,
+            fs=fs,
+        )
+
 
         del batch_data,batch_enve
         gc.collect()
@@ -53,15 +57,20 @@ def HI_count_highEvents_chns(filename,rel_thresh,abs_thresh,min_gap,min_last):
     filedir=os.path.dirname(filename)
     fileBaseName=os.path.basename(filename)
     filePreExt=fileBaseName.split('.')[0]
-    fileResultsDir='./HFOdets/'+filePreExt
+    fileResultsDir = f'./HFOdets/{filePreExt}'
 
 
     file_highEnve_times,file_highEnve_chnsCount,file_chnsNames=find_high_enveTimes_dir(fileResultsDir,segment_time,rel_thresh=rel_thresh,
                                         abs_thresh=abs_thresh,min_gap=min_gap,min_last=min_last)
 
-    np.savez(os.path.join('./HFOdets/',filePreExt+'_events.npz'),file_highEventsCount=file_highEnve_chnsCount,file_chnsNames=file_chnsNames,
-             file_highEvents_times=file_highEnve_times)
-    os.system('rm -r '+fileResultsDir)
+    np.savez(
+        os.path.join('./HFOdets/', f'{filePreExt}_events.npz'),
+        file_highEventsCount=file_highEnve_chnsCount,
+        file_chnsNames=file_chnsNames,
+        file_highEvents_times=file_highEnve_times,
+    )
+
+    os.system(f'rm -r {fileResultsDir}')
     os.system('trash-empty')
 
     return [file_highEnve_chnsCount,file_chnsNames,file_highEnve_times]

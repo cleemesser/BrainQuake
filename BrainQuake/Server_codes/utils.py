@@ -53,51 +53,38 @@ def task_log(req, num=None, name=None, hospital=None, reconType=None, state=None
     if req == "client":
         logs, i = read_a_log(num, name, hospital)
         if i > 0: # we've found sth.
-            print(f"Here are what we've checked!")
+            print("Here are what we've checked!")
             print(logs)
-            return logs, i
         else: # find nothing
             ## here we should ask for the patient's data from either client or dataset.
             print(f"Patient {num} {name} from {hospital} has not been found! Check out your input or please upload the patient's data! [y/n]")
             logs = f"Patient {num} {name} from {hospital} has not been found! Check out your input or please upload the patient's data!"
-            # reply = input()
-            # if reply == "y":
-            #     add_a_log(name, hospital)
-            #     logs, i = read_a_log(name, hospital)
-            #     print(f"Patient {name} from {hospital} has been added to the task line!")
-            #     print(f"Here are what we've checked!")
-            #     print(logs)
-            return logs, i
-    
+        return logs, i
     elif req == "freesurfer":
         if state == "finished":
             write_a_log(num, name, hospital, reconType, state, info)
             print(f"{req} has finished a task {num}!")
-            # new_flag, log = pick_a_log(num)
-            # if new_flag:
-            #     print(f"A task {log} will be sent to {req} program!")
-            #     ## call recon.py !!!
-            #     num_next = log.split(" ")[0]
-            #     write_a_log(num_next, state="running", info=0)
-            # else:
-            #     print(f"No new task is available!")
-            # return new_flag, log
-            return
         else: # state == "running"
             write_a_log(num, name, hospital, reconType, state, info)
             print(f"Log {num} has been updated!")
-            return
-    
+        # new_flag, log = pick_a_log(num)
+        # if new_flag:
+        #     print(f"A task {log} will be sent to {req} program!")
+        #     ## call recon.py !!!
+        #     num_next = log.split(" ")[0]
+        #     write_a_log(num_next, state="running", info=0)
+        # else:
+        #     print(f"No new task is available!")
+        # return new_flag, log
+        return
     elif req == "polling":
         new_flag, log = pick_a_log(num)
         if new_flag:
             print(f"A task {log} has been detected by {req}!")
-            # Here we should call a freesurfer program!
-            return new_flag, log
         else:
             print(f"No task has been detected by {req}!")
-            return new_flag, log
-    
+        # Here we should call a freesurfer program!
+        return new_flag, log
     else:
         raise IOError('Error: An unidentified request!')
     
@@ -120,21 +107,21 @@ def read_a_log(num=None, name=None, hospital=None):
     i : int
         how many logs are returned
     """
-    if (num == None and name == None and hospital == None):
+    if num is None and name is None and hospital is None:
         raise IOError('Please type in at least one piece of info about the patient(s) you ask!')
 
-    else:
-        f = open(Filepath, 'r')
+    with open(Filepath, 'r') as f:
         lines = f.readlines()
         log_read = ""
         i = 0
         for line in lines:
-            if (hospital == None) or (hospital in line):
-                if (name == None) or (name in line):
-                    if (num == None) or (num in line):
-                        log_read += line
-                        i = i + 1
-        f.close()
+            if (
+                (hospital is None or hospital in line)
+                and (name is None or name in line)
+                and (num is None or num in line)
+            ):
+                log_read += line
+                i = i + 1
     # print(log_read)
     return log_read, i
     
@@ -154,28 +141,25 @@ def write_a_log(num=None, name=None, hospital=None, reconType=None, state=None, 
     info : float, optional
         a number btw 0 and 1 to carry the progress rate of the request
     """
-    if (num == None and name == None):
+    if num is None and name is None:
         raise IOError('Please at least type in a patient\'s name or number!')
 
-    else:
-        f = open(Filepath, 'r+')
+    with open(Filepath, 'r+') as f:
         lines = f.readlines()
         # print(lines)
         i = 0
         for line in lines:
             i = i + 1
-            if (name == None) or (name in line):
-                if (num == None) or (num in line):
-                    parts = line.split(' ')
-                    parts[3] = reconType
-                    parts[4] = state
-                    parts[5] = str(info)+"\n"
-                    lines[i-1] = " ".join(parts)
+            if (name is None or name in line) and (num is None or num in line):
+                parts = line.split(' ')
+                parts[3] = reconType
+                parts[4] = state
+                parts[5] = str(info)+"\n"
+                lines[i-1] = " ".join(parts)
         # print(lines)
         f.seek(0)
         f.truncate() # Here we need an improvement!
         f.writelines(lines)
-        f.close()
     return
 
 def add_a_log(name, hospital, reconType):
@@ -190,11 +174,10 @@ def add_a_log(name, hospital, reconType):
     reconType: str
         recon-all or fast-surfer
     """
-    if (name == None or hospital == None):
+    if name is None or hospital is None:
         raise IOError('Please type in both the patient name and the hospital name!')
 
-    else:
-        f = open(Filepath, 'r+')
+    with open(Filepath, 'r+') as f:
         number_max = f.readlines()[-1].split(' ')[0]
         # print(number_max)
         num_val = int(number_max[1:]) + 1
@@ -204,7 +187,6 @@ def add_a_log(name, hospital, reconType):
         line_new = "\n" + " ".join([number_new, name, hospital, reconType, "wait", "0"])
         # print(line_new)
         f.write(line_new)
-        f.close()
     return number_new
 
 def pick_a_log(num):
@@ -230,7 +212,7 @@ def pick_a_log(num):
     lines = f.readlines()
     i = 0
     for line in lines:
-        if not (number_next in line): # the finished task is already the last one
+        if number_next not in line: # the finished task is already the last one
             new_flag = 0
             log_read = ""
         else: # the next task is in the line
@@ -239,11 +221,10 @@ def pick_a_log(num):
                 if i < 3:
                     new_flag = 1
                     log_read = line
-                    break
                 else:
                     new_flag = 0
                     log_read = ""
-                    break
+                break
             else:
                 if parts[4] == "running":
                     i = i + 1
@@ -267,14 +248,12 @@ def write_to_done(req, num, name, hospital, reconType, state, info):
     info : float, optional
         a number btw 0 and 1 to carry the progress rate of the request
     """
-    if (num == None and name == None):
+    if num is None and name is None:
         raise IOError('Please at least type in a patient\'s name or number!')
 
-    else:
-        f = open(Filepath2, 'a+')
+    with open(Filepath2, 'a+') as f:
         line = '\n' + num + ' ' + name + ' ' + hospital + ' ' + reconType + ' ' + state + ' ' + str(info)
         f.write(line)
-        f.close()
     return
 
 def divide_a_log(log):
@@ -303,25 +282,21 @@ def write_a_fastcmd(log):
     num, name, hospital, reconType, state, info = divide_a_log(log)
     filename = str(name)
     filepath = os.path.join(FILEPATH, filename, f"{filename}T1.nii.gz") # FILEPATH + str(name) + 'T1.nii.gz'
-    cmd = f"cd {FASTPATH} && ./run_fastsurfer.sh --t1 {filepath} --sid {filename}fast --sd $SUBJECTS_DIR --parallel --threads 8 --py python3.7 --surfreg >{filename}fast.log 2>&1"
     # cmd = f"python test.py"
-    return cmd
+    return f"cd {FASTPATH} && ./run_fastsurfer.sh --t1 {filepath} --sid {filename}fast --sd $SUBJECTS_DIR --parallel --threads 8 --py python3.7 --surfreg >{filename}fast.log 2>&1"
     
 def write_a_freecmd(log):
     num, name, hospital, reconType, state, info = divide_a_log(log)
     filename = str(name)
     filepath = os.path.join(FILEPATH, filename, f"{filename}T1.nii.gz") # FILEPATH + str(name) + 'T1.nii.gz'
-    cmd = f"recon-all -i {filepath} -s {filename} -all -parallel -openmp 8 >{filename}.log 2>&1"
     # cmd = f"python test.py"
-    return cmd
+    return f"recon-all -i {filepath} -s {filename} -all -parallel -openmp 8 >{filename}.log 2>&1"
     
 def write_a_infantcmd(log):
     num, name, hospital, reconType, state, info = divide_a_log(log)
     filename = str(name)
     filepath = os.path.join(FILEPATH, filename, f"{filename}T1.nii.gz") # FILEPATH + str(name) + 'T1.nii.gz'
-    # infant_age = str(age)
-    cmd = f"infant_recon_all --s {filename}"
-    return cmd
+    return f"infant_recon_all --s {filename}"
 
 def reconrun(cmd, num, name, hospital, reconType):
     """
@@ -333,23 +308,24 @@ def reconrun(cmd, num, name, hospital, reconType):
         Command to be sent to the shell.
     """
     assert reconType=='recon-all', 'Wrong reconType!'
-    
+
     # unzip cmd
     cdir = os.path.join(os.getcwd(), 'data', 'recv', name)
-    if os.path.isfile(os.path.join(cdir, f"{name}.zip")):
-        if not os.path.isfile(os.path.join(cdir, f"{name}CT.nii.gz")):
-            cmd_unzip = f"unzip {cdir}/{name}.zip -d {cdir}"
-            print(cmd_unzip)
-            os.system(cmd_unzip)
+    if os.path.isfile(
+        os.path.join(cdir, f"{name}.zip")
+    ) and not os.path.isfile(os.path.join(cdir, f"{name}CT.nii.gz")):
+        cmd_unzip = f"unzip {cdir}/{name}.zip -d {cdir}"
+        print(cmd_unzip)
+        os.system(cmd_unzip)
     fdir = os.path.join(cdir, 'fslresults')
     if not os.path.isdir(fdir):
         os.system(f"mkdir {fdir}")
-    
+
     # run recon-all
     print(f"Running shell command: {cmd}")
     task_log(req='freesurfer', num=num, reconType='recon-all', state='running', info=0)
     os.system(cmd)
-    
+
     # run supplementary cmds
     # cmd3 = f"mris_convert --combinesurfs /usr/local/freesurfer/subjects/{name}/surf/lh.pial /usr/local/freesurfer/subjects/{name}/surf/rh.pial /usr/local/freesurfer/subjects/{name}/{name}.stl"
     # print(cmd3)
@@ -364,7 +340,7 @@ def reconrun(cmd, num, name, hospital, reconType):
     cmd_mri_binarize = f"mri_binarize --i {SUBJECTS_DIR}/{name}/mri/brainmask.mgz --o {SUBJECTS_DIR}/{name}/mri/mask.mgz --min 1"
     print(cmd_mri_binarize)
     os.system(cmd_mri_binarize)
-    
+
     cmd_label_convert_rh = f"mri_annotation2label --subject {name} --hemi rh --outdir {SUBJECTS_DIR}/{name}/label"
     print(cmd_label_convert_rh)
     os.system(cmd_label_convert_rh)
@@ -372,15 +348,15 @@ def reconrun(cmd, num, name, hospital, reconType):
     cmd_label_convert_lh = f"mri_annotation2label --subject {name} --hemi lh --outdir {SUBJECTS_DIR}/{name}/label"
     print(cmd_label_convert_lh)
     os.system(cmd_label_convert_lh)
-    
+
     cmd_fslfolder = f"mkdir {SUBJECTS_DIR}/{name}/fslresults"
     print(cmd_fslfolder)
     os.system(cmd_fslfolder)
-    
+
     cmd_register = f"flirt -in {cdir}/{name}CT.nii.gz -ref {SUBJECTS_DIR}/{name}/mri/orig.nii.gz -out {SUBJECTS_DIR}/{name}/fslresults/{name}CT_Reg.nii.gz -cost normmi -dof 12"
     print(cmd_register)
     os.system(cmd_register)
-    
+
     task_log(req='freesurfer', num=num, reconType='recon-all', state='finished', info=1)
     write_to_done(req='freesurfer', num=num, name=name, hospital=hospital, reconType='recon-all', state='finished', info=1)
     cmd1 = f"cd {SUBJECTS_DIR} && zip -rq {name}.zip {name}"
@@ -450,11 +426,10 @@ def infantrun(cmd, num, name, hospital, reconType):
 def write_a_registercmd(name):
     # num, name, hospital, reconType, state, info = divide_a_log(log)
     filename = str(name)
-    filepath1 = f"{FILEPATH}{name}/" + str(name) + 'T1.nii.gz'
-    filepath2 = f"{FILEPATH}{name}/" + str(name) + 'CT.nii.gz'
-    cmd = f"nohup recon-all -i {filepath1} -s {filename} -all -parallel -openmp 8 >{filename}.log 2>&1"
+    filepath1 = f"{FILEPATH}{name}/{str(name)}T1.nii.gz"
+    filepath2 = f"{FILEPATH}{name}/{str(name)}CT.nii.gz"
     # cmd = f"python test.py"
-    return cmd
+    return f"nohup recon-all -i {filepath1} -s {filename} -all -parallel -openmp 8 >{filename}.log 2>&1"
 
 def registerrun(name):
     eePipeline.eep(name)

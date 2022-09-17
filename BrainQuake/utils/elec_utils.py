@@ -217,17 +217,22 @@ class GenerateLabel_thread(QThread):
         # process 3d line hough transform
         # hough_file = f"{self.directory_ct}{self.patient}.txt"
         hough_file = os.path.join(self.directory_ct, f"{self.patient}.txt")
-        if not os.path.exists(hough_file):
-            xs, ys, zs = trackRecognition(patient=self.patient, cmd_hough3d=CMD_Hough3D, CTresult_dir=self.directory_ct, intraFile=self.intra_file, thre=0)
-        else: # temporarily
-            # xs, ys, zs = utils.trackRecognition(patient=patient, cmd_hough3d=CMD_Hough3D, CTresult_dir=CTresult_dir, intraFile=intra_file, thre=Thre)
-            xs, ys, zs = dataExtraction(intraFile=self.intra_file, thre=0)
-            pass
-        
+        xs, ys, zs = (
+            dataExtraction(intraFile=self.intra_file, thre=0)
+            if os.path.exists(hough_file)
+            else trackRecognition(
+                patient=self.patient,
+                cmd_hough3d=CMD_Hough3D,
+                CTresult_dir=self.directory_ct,
+                intraFile=self.intra_file,
+                thre=0,
+            )
+        )
+
         # read detected lines' info
         elec_track = []
         with open(hough_file, 'r') as f:
-            for line in f.readlines():
+            for line in f:
                 a = re.findall(r"\d+\.?\d*", line)
                 for i in range(len(a)):
                     a[i] = float(a[i])
@@ -241,7 +246,7 @@ class GenerateLabel_thread(QThread):
         else: # if K_check != K:
             print(f"Warning: {self.K} electrodes implanted, but {K_check} has been clustered by Hough!")
             # sys.exit()
-        
+
             # process a gaussian mixture model for bug fixing
             centroids = np.array(elec_track[0:self.K, 1:4])
             # print(centroids)
@@ -249,7 +254,7 @@ class GenerateLabel_thread(QThread):
             gmm = GMM(n_components=self.K, covariance_type='full',means_init=centroids, random_state=None).fit(X)
             labels = gmm.predict(X)
             # print(labels)
-    
+
             Labels = np.zeros((256, 256, 256)) # labeled space
             for i in range(self.K):
                 ind = np.where(labels == i)
@@ -295,19 +300,19 @@ def savenpy(filePath, patientName):
         for file in files:
             elec_name = file.split('.')[0]
             elec_info = np.loadtxt(os.path.join(root, file))
-            
+
             elec_info = elec_info # [1:, :] # [:,np.array([2,1,0])]
             elec_dict[elec_name] = elec_info
-        
+
     # np.save(f"{filePath}/chnXyzDict.npy", elec_dict)
-    np.save(os.path.join(filePath, f"chnXyzDict.npy"), elec_dict)
+    np.save(os.path.join(filePath, "chnXyzDict.npy"), elec_dict)
 
 def lookupTable(subdir, patient, ctdir, elec_label):
     # annot_dir = f"{subdir}/mri/aparc.a2009s+aseg.mgz"
     annot_dir = os.path.join(subdir, 'mri', 'aparc.a2009s+aseg.mgz')
-    lookup_table = f"FreeSurferColorLUT.txt"
+    lookup_table = "FreeSurferColorLUT.txt"
     annot_img = nib.load(annot_dir).get_fdata()
-    
+
     # elecs_file = f"{ctdir}/{patient}_result/{elec_label}.txt"
     elecs_file = os.path.join(ctdir, f"{patient}_result/{elec_label}.txt")
     elecs_xyz = np.loadtxt(elecs_file, dtype='float', comments='#')
@@ -315,7 +320,7 @@ def lookupTable(subdir, patient, ctdir, elec_label):
     elecs_xyz[:, 0] = 128 - elecs_xyz[:, 0]
     elecs_xyz[:, 1] = 128 - elecs_xyz[:, 1]
     elecs_xyz[:, 2] = 128 + elecs_xyz[:, 2] 
-    
+
     labels = []
     for row in range(elecs_xyz.shape[0]):
         x = elecs_xyz[row, 0]
@@ -327,27 +332,30 @@ def lookupTable(subdir, patient, ctdir, elec_label):
         y2 = math.ceil(y)
         z1 = int(z)
         z2 = math.ceil(z)
-        val = [0]
-        val.append(annot_img[x1, y1, z1])
-        val.append(annot_img[x1, y1, z2])
-        val.append(annot_img[x1, y2, z1])
-        val.append(annot_img[x1, y2, z2])
-        val.append(annot_img[x2, y1, z1])
-        val.append(annot_img[x2, y1, z2])
-        val.append(annot_img[x2, y2, z1])
-        val.append(annot_img[x2, y2, z2])
+        val = [
+            0,
+            annot_img[x1, y1, z1],
+            annot_img[x1, y1, z2],
+            annot_img[x1, y2, z1],
+            annot_img[x1, y2, z2],
+            annot_img[x2, y1, z1],
+            annot_img[x2, y1, z2],
+            annot_img[x2, y2, z1],
+            annot_img[x2, y2, z2],
+        ]
+
         val = val[1:]
         labels.append(max(set(val), key = val.count))
-    
+
     # print(labels)
     labels_name = []
     for label in labels:
         with open(lookup_table, 'r') as f:
             lines = f.readlines()
             rows = len(lines)
+            b = str(int(label))
             for row in range(rows):
-                line = lines[row][0: 8]
-                b = str(int(label))
+                line = lines[row][:8]
                 if re.match(b, line):
                     # print(lines[row])
                     a = lines[row][len(b): -16].strip()
@@ -362,7 +370,7 @@ class ElectrodeSeg:
         # set up input initials
         self.filePath = filePath
         self.patientName = patName
-        
+
         raw_flag = 0 # check for the filepath existance
         for root, dirs, files in os.walk(self.filePath):
             for filename in files:
@@ -384,7 +392,7 @@ class ElectrodeSeg:
                     break
         if not label_flag:
             sys.exit()
-        
+
         self.rawData = nib.load(self.rawDataPath).get_fdata()
         self.labels = np.load(self.labelsPath)
         self.iLabel = iLabel
@@ -441,7 +449,7 @@ class ElectrodeSeg:
         self.startPoint()
         self.contactPoint(1)
         self.regression()
-        for j in np.arange(self.numMax - 1):
+        for _ in np.arange(self.numMax - 1):
             # if self.rawData[int(round(self.elecPos[-1,0])), int(round(self.elecPos[-1,1])), int(round(self.elecPos[-1,2]))] == 0:
             #     self.elecPos = self.elecPos[0:-1, :]
             #     break
@@ -541,7 +549,7 @@ class ElectrodeSeg:
         elif not ((np.array(seq_s) < 256).all() and (np.array(seq_r) < 256).all() and (np.array(seq_c) < 256).all()):
             print('Error: index too large 256!')
             return 0, 0, 0
-        
+
         else:
             ## extract the ROI cubic
             # test!!!
@@ -562,7 +570,7 @@ class ElectrodeSeg:
                 C100 = CM[0]
                 C010 = CM[1]
                 C001 = CM[2]
-                
+
                 x1 = C100
                 y1 = C010
                 z1 = C001
@@ -573,12 +581,12 @@ class ElectrodeSeg:
         x0 = self.headStart[0] if target == 1 else self.x0
         y0 = self.headStart[1] if target == 1 else self.y0
         z0 = self.headStart[2] if target == 1 else self.z0
-        
+
         x = int(round(x0))
         y = int(round(y0))
         z = int(round(z0))
         print(f"initial start voxel:({x0}, {y0}, {z0})")
-        
+
         # test!!!
         self.rawData_local = self.rawData_single
         diff_array = self.pos_elec - np.array([x0, y0, z0])
@@ -588,7 +596,7 @@ class ElectrodeSeg:
         (x1, y1, z1) = self.converge(x, y, z)
         itr = 1
         flag_convergence = 0
-        while not ((x==int(round(x1))) and (y==int(round(y1))) and (z==int(round(z1)))):
+        while x != int(round(x1)) or y != int(round(y1)) or z != int(round(z1)):
             x = int(round(x1))
             y = int(round(y1))
             z = int(round(z1))
@@ -597,34 +605,33 @@ class ElectrodeSeg:
             if itr > 5:
                 flag_convergence = 1
                 break
-        
+
         print(f"Convergent center voxel coordinates:({x1},{y1},{z1})")
         print(f"Convergent center voxel value:{self.rawData[int(round(x1)), int(round(y1)), int(round(z1))]}")
-        
+
         self.flag_step_stop = 0
         if (x1, y1, z1) == (0, 0, 0):
             self.flag_step_stop = 1
             print('here1,converged to 0!')
             # self.elecPos = np.vstack([self.elecPos, [x1, y1, z1]])
-        
+
         else:
             if not flag_convergence:
-                print('here2,converged normally!') 
-                self.targetPoint = [x1, y1, z1] if target == 1 else self.targetPoint
-                self.elecPos = np.vstack([self.elecPos, [x1, y1, z1]])
+                print('here2,converged normally!')
             else:
-                print('here3, maybe not convergent!') 
-                self.targetPoint = [x1, y1, z1] if target == 1 else self.targetPoint
-                self.elecPos = np.vstack([self.elecPos, [x1, y1, z1]])
+                print('here3, maybe not convergent!')
+
+            self.targetPoint = [x1, y1, z1] if target == 1 else self.targetPoint
+            self.elecPos = np.vstack([self.elecPos, [x1, y1, z1]])
 
     def regression(self):
         ## regress an electrode and find the axis direction
         X = np.transpose(np.vstack((self.xs, self.ys)))
         y = self.zs
-        
+
         forcedX = np.transpose(np.array([self.targetPoint[0], self.targetPoint[1]]))
         forcedy = self.targetPoint[2]
-        
+
         ## implant a contraint regression, forcing on the head point
         X = X - forcedX
         y = y - forcedy
@@ -632,7 +639,7 @@ class ElectrodeSeg:
         reg.intercept_ = reg.intercept_ + forcedy - np.dot(forcedX, reg.coef_)
         ## regression between x and y
         reg2 = LinearRegression(fit_intercept=True).fit(X=self.xs.reshape(-1,1), y=self.ys)
-        
+
         self.coef = reg.coef_
         self.intercept = reg.intercept_
         self.coef2 = reg2.coef_
@@ -645,7 +652,7 @@ class ElectrodeSeg:
         # delta_x = np.sqrt(np.power(dis, 2) / (1 + np.power(self.coef2[0],2) + np.power(np.dot(self.coef, np.array([1, self.coef2[0]])) ,2)))
         # delta_y = np.dot(self.coef2[0], delta_x)
         # delta_z = np.dot(self.coef, np.array([1, self.coef2[0]])) * delta_x
-        
+
         diff_x = np.max(self.xs) - np.min(self.xs)
         diff_y = np.max(self.ys) - np.min(self.ys)
         diff_z = np.max(self.zs) - np.min(self.zs)
@@ -658,8 +665,23 @@ class ElectrodeSeg:
         # delta_y = self.reg3.coef_ * np.sqrt(np.power(dis,2) / (1 + np.power(self.reg2.coef_,2) + np.power(self.reg3.coef_,2)))
         # delta_z = np.sqrt(np.power(dis,2) / (1 + np.power(self.reg2.coef_,2) + np.power(self.reg3.coef_,2)))
 
-        self.x0 = np.int(self.elecPos[-1,0] - np.round(delta_x)) if ((self.direction[0]==-2) or (self.direction[0]==0)) else np.int(self.elecPos[-1,0] + np.round(delta_x))
-        self.y0 = np.int(self.elecPos[-1,1] - np.round(delta_y)) if ((self.direction[1]==-2) or (self.direction[1]==0)) else np.int(self.elecPos[-1,1] + np.round(delta_y))
-        self.z0 = np.int(self.elecPos[-1,2] - np.round(delta_z)) if ((self.direction[2]==-2) or (self.direction[2]==0)) else np.int(self.elecPos[-1,2] + np.round(delta_z))
-        
+        self.x0 = (
+            np.int(self.elecPos[-1, 0] - np.round(delta_x))
+            if self.direction[0] in [-2, 0]
+            else np.int(self.elecPos[-1, 0] + np.round(delta_x))
+        )
+
+        self.y0 = (
+            np.int(self.elecPos[-1, 1] - np.round(delta_y))
+            if self.direction[1] in [-2, 0]
+            else np.int(self.elecPos[-1, 1] + np.round(delta_y))
+        )
+
+        self.z0 = (
+            np.int(self.elecPos[-1, 2] - np.round(delta_z))
+            if self.direction[2] in [-2, 0]
+            else np.int(self.elecPos[-1, 2] + np.round(delta_z))
+        )
+
+
         self.contactPoint(0)

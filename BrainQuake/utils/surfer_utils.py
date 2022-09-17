@@ -43,7 +43,7 @@ def text_recv(socket):
             # print("New message length:", msg[:HEADERSIZE])
             msglen = int(msg[:HEADERSIZE])
             new_msg = False
-        
+
         full_msg += msg
 
         if len(full_msg) == (msglen//BUFFER_SIZE+1)*BUFFER_SIZE:
@@ -57,8 +57,8 @@ def text_recv(socket):
 
 def file_send(socket, pat_name):
 ## send a file and its file info to the server
-    pat_filepath = os.path.join('data', 'send', pat_name+'.nii.gz')
-    filename = pat_name+'.nii.gz'
+    pat_filepath = os.path.join('data', 'send', f'{pat_name}.nii.gz')
+    filename = f'{pat_name}.nii.gz'
     filesize = os.path.getsize(pat_filepath)
     socket.send(f'{filename}{SEPARATOR}{filesize}'.encode())
 

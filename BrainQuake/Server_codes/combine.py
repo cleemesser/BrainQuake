@@ -9,20 +9,18 @@ import utils as utils
 CHECKTIME = 10
 Filepath = os.path.join(os.getcwd(), 'data', 'recv', 'task_done.txt') # './data/recv/task_done.txt'
 
+# send a check request to task_log.py
+req = "polling"
 while True: ## poll and recon
     # wait for a poll
     time.sleep(10)
 
-    # check for the last finished task
-    f = open(Filepath)
-    lines = f.readlines()
-    last_line = lines[-1]
-    num = last_line.split(" ")[0]
-    f.close()
+    with open(Filepath) as f:
+        lines = f.readlines()
+        last_line = lines[-1]
+        num = last_line.split(" ")[0]
     print(f"Last finished task is: {num}.")
 
-    # send a check request to task_log.py
-    req = "polling"
     new_flag, log = utils.task_log(req, num)
 
     # start a recon task or wait for the next poll
@@ -42,9 +40,6 @@ while True: ## poll and recon
         # p2 = multiprocessing.Process(target=utils.estimate,args=(num,name,hospital,state,info,))
         p1.start()
         # p2.start()
-
-    else:
-        pass
 
     # wait for the next poll
     time.sleep(3*CHECKTIME)

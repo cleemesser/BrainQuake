@@ -60,9 +60,7 @@ class Electrodes(QtWidgets.QWidget, Electrodes_gui):
     def importSurf(self):
         # select a freesurfer subject file folder
         self.directory_surf = QFileDialog.getExistingDirectory(self, "getExistingDirectory", os.getcwd())
-        if not self.directory_surf:
-            pass
-        else: # a folder selected
+        if self.directory_surf:
             self.Patname_surf = self.directory_surf.split('/')[-1] # identify the patient name
             self.lineEdit_1.setText(self.Patname_surf) # set the patient name to lineEdit_1
             self.lineEdit_1.setReadOnly(True) # name set!
@@ -84,7 +82,7 @@ class Electrodes(QtWidgets.QWidget, Electrodes_gui):
             self.doubleSpinBox_1.setEnabled(False)
             self.tableWidget.clearContents()
             self.tableWidget.setRowCount(0)
-            
+
             self.fig = Figure(figsize=(10,10))
             self.axes.clear()
             self.scene.addWidget(FigureCanvas(self.fig))
@@ -93,18 +91,16 @@ class Electrodes(QtWidgets.QWidget, Electrodes_gui):
     def importCT(self):
         # import xxxCT_Reg.nii.gz file
         self.directory_ct, _ = QFileDialog.getOpenFileName(self, "getOpenFileName", "", "All Files (*);;Nifti Files (*.nii.gz)")
-        if not self.directory_ct:
-            pass
-        else: # a xxxCT_Reg.nii.gz file selected
+        if self.directory_ct:
             self.Filename_ct = self.directory_ct.split('/')[-1] # identify ct filename
             self.Patname_ct = self.Filename_ct.split('.')[0].split('C')[0] # identify ct patient name
             self.directory_ct = self.directory_ct.split(self.Filename_ct)[0] # save ct directory without filename
             # 此处应有判等/警告和break
-    
+
             self.lineEdit_3.setEnabled(True) # enable 3 parameters' input
             self.lineEdit_4.setEnabled(True)
             self.doubleSpinBox_1.setEnabled(True)
-            
+
             find_flag = 0 # check for xxxCT_intracranial_thre_K_ero.nii.gz
             find_flag1 = 0 # check for xxx_labels.npy
             for root, dirs, files in os.walk(self.directory_ct):
@@ -114,7 +110,7 @@ class Electrodes(QtWidgets.QWidget, Electrodes_gui):
                         self.ero_itr = int(filename.split('_')[-1].split('.')[0]) # read 3 parameters from filename
                         self.K = int(filename.split('_')[-2])
                         self.thre = float(filename.split('_')[-3])
-                        
+
                         self.pushButton_3.setEnabled(True) # enable preprocess btn
                         self.pushButton_4.setEnabled(True) # enable preprocessView btn
                         self.lineEdit_3.setText(str(self.K)) # display 3 parameters
@@ -129,20 +125,20 @@ class Electrodes(QtWidgets.QWidget, Electrodes_gui):
                         self.pushButton_6.setEnabled(True)
                         find_flag1 = 1
                         break        
-                    
+
             if not find_flag: # if not found preprocessed!
                 self.lineEdit_4.setText(str(10)) # set 2 parameters recommended, without variable K
                 self.doubleSpinBox_1.setValue(10)
             
     def preprocessData(self):
         self.pushButton_4.setEnabled(False) # disable preoprocessView btn before thread ends
-        
+
         for root, dirs, files in os.walk(self.directory_ct): # delete former intra_file
             for filename in files:
                 if re.search(r'_intracranial', filename): 
                     os.remove(os.path.join(self.directory_ct, filename))
                     break
-        
+
         # 此处应判别整数
         self.ero_itr = int(self.lineEdit_4.text()) # read 3 parameters from screen
         self.K = int(self.lineEdit_3.text())
@@ -165,16 +161,13 @@ class Electrodes(QtWidgets.QWidget, Electrodes_gui):
                     self.ero_itr = int(filename.split('_')[-1].split('.')[0]) # read 3 parameters from filename
                     self.K = int(filename.split('_')[-2])
                     self.thre = float(filename.split('_')[-3])
-                    
+
                     self.pushButton_4.setEnabled(True) # enable preprocessView btn
                     self.lineEdit_3.setText(str(self.K)) # display 3 parameters
                     self.lineEdit_4.setText(str(self.ero_itr))
                     self.doubleSpinBox_1.setValue(self.thre*100)
                     find_flag = 1
                     break
-        if not find_flag:
-            # 此处提出警告，预处理失败，没有intra文件！
-            pass
 
     def viewIntra(self):
         find_flag = 0 # check for intra_file
@@ -185,16 +178,13 @@ class Electrodes(QtWidgets.QWidget, Electrodes_gui):
                     self.ero_itr = int(filename.split('_')[-1].split('.')[0]) # read 3 parameters from filename
                     self.K = int(filename.split('_')[-2])
                     self.thre = float(filename.split('_')[-3])
-                    
+
                     self.lineEdit_3.setText(str(self.K)) # display 3 parameters
                     self.lineEdit_4.setText(str(self.ero_itr))
                     self.doubleSpinBox_1.setValue(self.thre*100)
                     find_flag = 1
                     break
-        if not find_flag:
-            # 此处提出警告，没有找到intra文件！
-            pass
-        else: # intra_file exists and is possible to be OK for following steps
+        if find_flag:
             self.pushButton_5.setEnabled(True) # enable labelGen btn
             self.thread_3.patient = self.patient
             self.thread_3.thre = self.thre
@@ -237,7 +227,7 @@ class Electrodes(QtWidgets.QWidget, Electrodes_gui):
                     self.ero_itr = int(filename.split('_')[-1].split('.')[0])
                     self.K = int(filename.split('_')[-2])
                     self.thre = float(filename.split('_')[-3])
-                    
+
                     self.pushButton_1.setEnabled(False) # label btn clicked so disable the above processable btns
                     self.pushButton_3.setEnabled(False)
                     self.lineEdit_3.setText(str(self.K)) # label btn clicked so disable the above editable lines
@@ -248,10 +238,7 @@ class Electrodes(QtWidgets.QWidget, Electrodes_gui):
                     self.doubleSpinBox_1.setEnabled(False)
                     find_flag = 1
                     break
-        if not find_flag:
-            # 此处提出警告，没有找到intra文件！
-            pass
-        else: # intra_file exists!
+        if find_flag:
             self.thread_2.patient = self.patient
             self.thread_2.directory_ct = self.directory_ct
             self.thread_2.intra_file = self.CTintra_file
@@ -262,7 +249,6 @@ class Electrodes(QtWidgets.QWidget, Electrodes_gui):
         if k_flag: 
             # 此处应警告，聚类K_check<K
             print('Warning: Cannot cluster enough electrode tracks!')
-            pass
         else:
             find_flag = 0 # check for label_file existance
             for root, dirs, files in os.walk(self.directory_ct):
@@ -272,9 +258,7 @@ class Electrodes(QtWidgets.QWidget, Electrodes_gui):
                         self.directory_labels = os.path.join(self.directory_ct, filename)
                         find_flag = 1
                         break
-            if not find_flag:
-                pass
-            else:
+            if find_flag:
                 self.labels = np.load(self.directory_labels, allow_pickle=True)
                 self.fig = Figure(figsize=(10,10))
                 self.scene.addWidget(FigureCanvas(self.fig))
@@ -289,7 +273,7 @@ class Electrodes(QtWidgets.QWidget, Electrodes_gui):
                 for i in range(self.K):
                     indx, indy, indz = np.where(self.labels == i+1)
                     self.axes.scatter(indx, indy, indz, marker='.', c=self.c[i])
-        
+
                 # self.scene.addWidget(FigureCanvas(self.fig))
                 self.graphicsView.show()
                 self.pushButton_8.setEnabled(True) # enable labelDone btn
@@ -343,7 +327,7 @@ class Electrodes(QtWidgets.QWidget, Electrodes_gui):
 
         # utils.savenpy(filePath=self.directory_ct, patientName=self.patient)
         savenpy(filePath=self.directory_ct, patientName=self.patient)
-        
+
         ## set tableWidget
         # dir = f"{self.directory_ct}/{self.patient}_result"
         dir = os.path.join(self.directory_ct, f"{self.patient}_result")
@@ -390,7 +374,7 @@ class Electrodes(QtWidgets.QWidget, Electrodes_gui):
             self.axes.text(130-self.elec_dict[item][0,0], 130-self.elec_dict[item][0,2], 130+self.elec_dict[item][0,1], f"{item}", c='black')
         # self.scene.addWidget(FigureCanvas(self.fig))
         self.graphicsView.show()
-        
+
         self.pushButton_10.setEnabled(True)
 
     def allSet(self):
@@ -408,21 +392,18 @@ class Electrodes(QtWidgets.QWidget, Electrodes_gui):
         # verr,facer=nib.freesurfer.read_geometry(f"{self.directory_surf}/surf/rh.pial")
         verl,facel=nib.freesurfer.read_geometry(os.path.join(self.directory_surf, 'surf', 'lh.pial'))
         verr,facer=nib.freesurfer.read_geometry(os.path.join(self.directory_surf, 'surf', 'rh.pial'))
-        
+
         all_ver=np.concatenate([verl,verr],axis=0)
         tmp_facer=facer+verl.shape[0]
         all_face=np.concatenate([facel,tmp_facer],axis=0)
         vol_center_tmp=np.dot(aff_matrix,np.array([128,128,128,1])[:,None])
         vol_center = vol_center_tmp[:3]
-        
-        reCenter_xyzDict={}
-        for ch,xyz in elecs_xyzDict.items():
-            reCenter_xyzDict[ch]=xyz
-        
+
+        reCenter_xyzDict = dict(elecs_xyzDict.items())
         print('------')
         for k, v in reCenter_xyzDict.items():
             print(k, v.shape)
-        
+
         opacity=0.4
         ambient=0.4225
         specular = 0.3
@@ -446,12 +427,12 @@ class Electrodes(QtWidgets.QWidget, Electrodes_gui):
         for child in mlab.get_engine().scenes[0].children:
             poly_data_normals = child.children[0]
             poly_data_normals.filter.feature_angle = 80.0
-        
+
         for chnn,xyz in reCenter_xyzDict.items():
             for j in range(xyz.shape[0]):
                 mlab.points3d(xyz[j,0], xyz[j,1], xyz[j,2], color=(0,0,0), scale_factor=1.5)
             mlab.text3d(xyz[-1,0]+4,xyz[-1,1]+4,xyz[-1,2]+4,chnn,orient_to_camera=True,color=(0,0,1),line_width=10,scale=2)
-            
+
         mlab.draw()
 
 if __name__ == "__main__":

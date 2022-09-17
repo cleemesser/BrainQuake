@@ -124,7 +124,7 @@ class Downloader(QThread):
         self.task_type = '3'
         surfer_utils.text_send(self.s1, self.task_type)
         self.s1.close()
-        
+
         ## receiving a recon zip file
         time.sleep(1)
         self.s2 = surfer_utils.create_socket(host, 6664)
@@ -257,8 +257,6 @@ class reconSurferUi(QtWidgets.QWidget, Ui_reconSurfer):
             if str(item.split(' ')[-1]) == str(1):
                 self.thread_3.downloadlist = self.items
                 self.thread_3.start()
-            else:
-                pass
         # if ~(self.thread_3.isRunning()): ###Bug!!!
         # self.thread_3.downloadlist = self.items
         # self.thread_3.start()
@@ -295,8 +293,6 @@ class reconSurferUi(QtWidgets.QWidget, Ui_reconSurfer):
             # print(faceall)
             mlab.triangular_mesh(verall[:,0], verall[:,1], verall[:,2], faceall)
             mlab.draw()
-        else:
-            pass
 
     def itemsSelected(self):
         items = self.tableWidget.selectedItems()

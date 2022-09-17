@@ -24,18 +24,18 @@ def recv_a_t1(clientsocket, task):
     fs_flag = 0 # a freesurfer recon task has not been completed
     # receive a T1 file
     if task == '10':
-        reconType = f"recon-all"
+        reconType = "recon-all"
         number = utils_scs.file_recv(clientsocket, reconType)
     elif task == '11':
-        reconType = f"fast-surfer"
+        reconType = "fast-surfer"
         number = utils_scs.file_recv(clientsocket, reconType)
     elif task == '12':
-        reconType = f"infant-surfer" 
+        reconType = "infant-surfer"
         number = utils_scs.file_recv(clientsocket, reconType)
     print('T1 file received')
     # here we read the log
     log, i = utils.read_a_log(num=number)
-    
+
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     # s.bind((socket.gethostname(), 1241))
     s.bind((host, 6666))

@@ -32,15 +32,14 @@ def return_hil_enve(data,fs,freqband):
 def return_hil_enve_norm(data,fs,freqband):
     if freqband[1]-freqband[0]<=20:
         return return_hil_enve(data,fs,freqband)
-    else:
-        filter_bank=np.arange(freqband[0],freqband[1],20)
-        filter_bank=np.append(filter_bank,freqband[1])
-        filter_bank=list(zip(filter_bank[:-1],filter_bank[1:]))
-        multi_band_enve=[]
-        for freq in filter_bank:
-            tmp_enve=return_hil_enve(data,fs,freq)
-            multi_band_enve.append(tmp_enve)
-        return np.sum(multi_band_enve,axis=0)
+    filter_bank=np.arange(freqband[0],freqband[1],20)
+    filter_bank=np.append(filter_bank,freqband[1])
+    filter_bank=list(zip(filter_bank[:-1],filter_bank[1:]))
+    multi_band_enve=[]
+    for freq in filter_bank:
+        tmp_enve=return_hil_enve(data,fs,freq)
+        multi_band_enve.append(tmp_enve)
+    return np.sum(multi_band_enve,axis=0)
 
 
 def return_timeRanges(onOff_array,fs,start_time=0):
@@ -54,15 +53,13 @@ def return_timeRanges(onOff_array,fs,start_time=0):
 
     if len(start_index)==0 or len(end_index)==0:
         return np.array([])
-    range_times=np.vstack([times[start_index],times[end_index]]).T
-    return range_times
+    return np.vstack([times[start_index],times[end_index]]).T
 
 def merge_timeRanges(range_times,min_gap=10):
-    merged_times=[]
     range_times=range_times.tolist()
     if len(range_times)==0:
         return []
-    merged_times.append(range_times[0])
+    merged_times = [range_times[0]]
     for i in range(1,len(range_times)):
         if range_times[i][0]-merged_times[-1][1]<min_gap*1e-3:
             merged_times[-1][1]=range_times[i][1]
@@ -91,10 +88,7 @@ def find_high_enveTimes(raw_enve,chns_names,fs,rel_thresh=3.,abs_thresh=3.,min_g
     return high_times
 
 def cat_chns_times(times_1,times_2):
-    cat_times=[]
-    for chi in range(len(times_1)):
-        cat_times.append(times_1[chi]+times_2[chi])
-    return cat_times
+    return [times_1[chi]+times_2[chi] for chi in range(len(times_1))]
 
 def find_high_enveTimes_dir(enve_dir,segment_time=200,rel_thresh=3.0,abs_thresh=3.,min_gap=20,min_last=50):
     whole_enveTimes=[]

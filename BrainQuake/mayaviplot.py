@@ -26,7 +26,7 @@ def vis3D(filePath, patName):
     print(aff_matrix)
     verl,facel=nib.freesurfer.read_geometry(f"{filePath1}/{patName}/surf/lh.pial")
     verr,facer=nib.freesurfer.read_geometry(f"{filePath1}/{patName}/surf/rh.pial")
-    
+
     all_ver=np.concatenate([verl,verr],axis=0)
     tmp_facer=facer+verl.shape[0]
     all_face=np.concatenate([facel,tmp_facer],axis=0)
@@ -35,18 +35,14 @@ def vis3D(filePath, patName):
     # print('vol_center_tmp\n', vol_center_tmp)
     # print(vol_center)
     # vol_center=np.dot(aff_matrix,np.array([0,0,0,1])[:,None])[:3]
-    reCenter_xyzDict={}
-    for ch,xyz in elecs_xyzDict.items():
-        # tmp_xyz=np.dot(aff_matrix,np.concatenate([xyz,np.ones((xyz.shape[0],1))],axis=1).T)[:3].T
-        # reCenter_xyzDict[ch]=(xyz - vol_center.T) # [:-2, :] # remove the 2 outermost contacts
-        reCenter_xyzDict[ch]=xyz
+    reCenter_xyzDict = dict(elecs_xyzDict.items())
     # # for songzishuo
     # reCenter_xyzDict["E'"]=reCenter_xyzDict["E'"][:-2, :]
     # reCenter_xyzDict["F'"]=reCenter_xyzDict["F'"][:-1, :]
     print('------')
     for k, v in reCenter_xyzDict.items():
         print(k, v.shape)
-    
+
     opacity=0.4
     ambient=0.4225
     specular = 0.3
@@ -166,7 +162,7 @@ def mayaviViewCheck(filePath, surfPath, subname):
     brain.add_label('rostralanteriorcingulate',color=cin_color,hemi='rh',alpha=cigulate_alpha)
     brain.add_label('isthmuscingulate',color=cin_color,hemi='rh',alpha=cigulate_alpha)
     brain.add_label('posteriorcingulate',color=cin_color,hemi='rh',alpha=cigulate_alpha)
-    
+
     brain.show_view('lateral')
     mlab.points3d(elecs_xyz_cf[:,0],elecs_xyz_cf[:,1],elecs_xyz_cf[:,2],scale_factor=2,color=(0.4,0.4,0.4))
     mlab.points3d(elecs_xyz_wk[:,0],elecs_xyz_wk[:,1],elecs_xyz_wk[:,2],scale_factor=2,color=(0.8,0.8,0.8))
